@@ -1,6 +1,10 @@
 #! python3
 # base.py - go to envt canada site, compare yest's temp to yest's avg historical temp
 
+###
+# https://www.twilio.com/blog/build-deploy-twitter-bots-python-tweepy-pythonanywhere
+###
+
 import requests, bs4, os, datetime, tweepy
 
 def check_temps():
@@ -29,21 +33,30 @@ def check_temps():
 	print("Is yesterday's temp above the daily historic average?")
 	print(float(yest_temp) > float(historic_temp))
 
+	if float(yest_temp) > float(historic_temp):
+		return "Yesterday in Yellowknife, the temperature was "+str(abs(float(yest_temp)-float(historic_temp)))+" degrees warmer than the daily maximum climate normal."
+
+	else: 
+		return ''
+
 
 def tweet():
-	
-	consumer_key = os.environ['consumer_key']
-	consumer_secret = os.environ['consumer_secret']
-	access_token = os.environ['access_token']
-	access_token_secret = os.environ['access_token_secret']
+	if check_temps() != '':
 
-	auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-	auth.set_access_token(access_token, access_token_secret)
-	api = tweepy.API(auth)
+		consumer_key = os.environ['consumer_key']
+		consumer_secret = os.environ['consumer_secret']
+		access_token = os.environ['access_token']
+		access_token_secret = os.environ['access_token_secret']
 
-	user = api.me()
-	api.update_status('Testing Testing') 
+		auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+		auth.set_access_token(access_token, access_token_secret)
+		api = tweepy.API(auth)
+
+		user = api.me()
+		api.update_status(check_temps()) 
+
+	else: 
+		print('Today not warmer than historic avg')
 
 
-check_temps()
-#tweet()
+tweet()
