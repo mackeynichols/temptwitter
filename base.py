@@ -15,6 +15,8 @@ yest_year = yest_date.strftime('%Y')
 
 def check_temps():
 	# returns true if yest's forecast beats yest's average high, as per weather.gc.ca's website, in Yellowknife
+
+	### CHECK AGAINST THE AVERAGE, NOT THE AVERAGE HIGH ###!!!
 	
 	yest_url = "http://climate.weather.gc.ca/climate_data/daily_data_e.html?Year="+yest_year+"&Month="+yest_month+"&Day="+yest_day+"&StationID=51058&Prov=NT&urlExtension=_e.html"
 	historic_url = "http://climate.weather.gc.ca/climate_normals/results_1981_2010_e.html?stnID=1706&autofwd=1"
@@ -24,8 +26,8 @@ def check_temps():
 	print(yest_date_str)
 
 	yest_soup = bs4.BeautifulSoup(requests.get(yest_url).text, "html.parser")
-	yest_temp = yest_soup.select('div#dynamicDataTable > table > tbody > tr')[ int(yest_day) ].select('td')[1].text
-	print("Yesterday's High:\n"+yest_temp)
+	yest_temp = yest_soup.select('div#dynamicDataTable > table > tbody > tr')[ int(yest_day) ].select('td')[3].text
+	print("Yesterday's Mean:\n"+yest_temp)
 
 	historic_temp = calculateNormals(yest_month, yest_day)
 	
