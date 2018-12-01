@@ -87,6 +87,6 @@ def calculateNormals(month, day, stnID = '1706'):
 	print( month+'-'+day+"'s average temp back in the day was:\n"+str(avg_temp) )
 	return(avg_temp)
 
-check_temps()
-#tweet()
+#check_temps()
+tweet()
 #calculateNormals('01', '01')
