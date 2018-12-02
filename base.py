@@ -5,7 +5,7 @@
 # https://www.twilio.com/blog/build-deploy-twitter-bots-python-tweepy-pythonanywhere
 ###
 
-import requests, bs4, os, datetime, tweepy, csv, pandas
+import requests, bs4, os, datetime, tweepy, csv, pandas, json
 
 yest_date = datetime.datetime.now() - datetime.timedelta(1)
 
@@ -35,7 +35,7 @@ def check_temps():
 	print(float(yest_temp) > float(historic_temp))
 
 	if float(yest_temp) > float(historic_temp):
-		return "Yesterday in Yellowknife, the temperature was "+str(abs(float(yest_temp)-float(historic_temp)))+" degrees warmer than the historic average.\n\n#ClimateChangeRightNow #ClimateAction"
+		return "TEST2: Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" degrees warmer than the historic average.\n\n#ClimateChangeRightNow #ClimateAction"
 
 	else: 
 		return ''
@@ -44,10 +44,12 @@ def check_temps():
 def tweet():
 	if check_temps() != '':
 
-		consumer_key = os.environ['consumer_key']
-		consumer_secret = os.environ['consumer_secret']
-		access_token = os.environ['access_token']
-		access_token_secret = os.environ['access_token_secret']
+
+		keys = json.load(open('keys.json'))
+		consumer_key = keys['consumer_key']
+		consumer_secret = keys['consumer_secret']
+		access_token = keys['access_token']
+		access_token_secret = keys['access_token_secret']
 
 		auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 		auth.set_access_token(access_token, access_token_secret)
