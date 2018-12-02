@@ -35,7 +35,7 @@ def check_temps():
 	print(float(yest_temp) > float(historic_temp))
 
 	if float(yest_temp) > float(historic_temp):
-		return "TEST2: Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" degrees warmer than the historic average.\n\n#ClimateChangeRightNow #ClimateAction"
+		return "Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" degrees warmer than the historic average.\n\n#ClimateChangeRightNow #ClimateAction"
 
 	else: 
 		return ''
