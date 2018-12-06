@@ -56,7 +56,7 @@ def tweet():
 		api = tweepy.API(auth)
 
 		user = api.me()
-		#api.update_status(check_temps()) 
+		api.update_status(check_temps()) 
 
 	else: 
 		print('Today not warmer than historic avg')
