@@ -56,7 +56,7 @@ def tweet():
 		api = tweepy.API(auth)
 
 		user = api.me()
-		api.update_status(check_temps()) 
+		#api.update_status(check_temps()) 
 
 	else: 
 		print('Today not warmer than historic avg')
@@ -66,12 +66,10 @@ def calculateNormals(month, day, stnID = '1706'):
 
 	avg_temps = pandas.DataFrame()
 
-	for intYr in range(1970,1971+1):
+	for intYr in range(1971,2000+1):
 	        
         # Build the query
 		strQry = 'http://climate.weather.gc.ca/climate_data/bulk_data_e.html?format=csv&stationID=' + stnID + "&Year=" + str(intYr) +'&Month=' + str(month) + "&timeframe=1&submit=Download+Data" 
-
-		#ßprint('Querying station ' + stnID + ' for year ' + str(intYr) + ' and month ' + str(month) )
          
         # Parse the response       
 		response = requests.get(strQry)
@@ -83,8 +81,12 @@ def calculateNormals(month, day, stnID = '1706'):
 		
 		# Keep only input day data and add it to the previous years' data
 		df = df[( df.Day == day )]
+		print(strQry)
+		print(str(intYr) + ' ' + str(month) + ' ' + str(day))
+		print(df['Temp (°C)'])
 		avg_temps = pandas.concat([avg_temps, df])
 
+	print(avg_temps['Temp (°C)'])
 	avg_temp = avg_temps['Temp (°C)'].mean() 
 	print( month+'-'+day+"'s average temp back in the day was:\n"+str(avg_temp) )
 	return(avg_temp)
