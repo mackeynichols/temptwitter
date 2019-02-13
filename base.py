@@ -15,34 +15,39 @@ yest_year = yest_date.strftime('%Y')
 
 def check_temps():
 	# returns true if yest's forecast beats yest's average high, as per weather.gc.ca's website, in Yellowknife
-
-	### CHECK AGAINST THE AVERAGE, NOT THE AVERAGE HIGH ###!!!
 	
 	yest_url = "http://climate.weather.gc.ca/climate_data/daily_data_e.html?Year="+yest_year+"&Month="+yest_month+"&Day="+yest_day+"&StationID=51058&Prov=NT&urlExtension=_e.html"
 	historic_url = "http://climate.weather.gc.ca/climate_normals/results_1981_2010_e.html?stnID=1706&autofwd=1"
-	print(yest_url)
+	#print(yest_url)
 
 	yest_date_str = yest_date.strftime('%B %d, %Y')
-	print(yest_date_str)
+	#print(yest_date_str)
 
 	yest_soup = bs4.BeautifulSoup(requests.get(yest_url).text, "html.parser")
 	yest_temp = yest_soup.select('div#dynamicDataTable > table > tbody > tr')[ int(yest_day) ].select('td')[3].text
-	print("Yesterday's Mean:\n"+yest_temp)
+	#print("Yesterday's Mean:\n"+yest_temp)
 
 	historic_temp = calculateNormals(yest_month, yest_day)
 	
 	print("Is yesterday's temp above the daily historic average?")
 	print(float(yest_temp) > float(historic_temp))
 
-	if float(yest_temp) > float(historic_temp):
-		return "Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" degrees warmer than the historic average.\n\n#ClimateChangeRightNow #ClimateAction"
+	if float(yest_temp) - float(historic_temp) > 1:
+		history = do_history('above')
+		return "Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" °C warmer than the historic average.\n"+history+"\n\n#ClimateChangeRightNow #ClimateAction"
+
+	if float(yest_temp) - float(historic_temp) < -1:
+		history = do_history('below')
+		return "Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" °C colder than the historic average.\n"+history+"\n\n#ClimateChangeRightNow #ClimateAction"
+
 
 	else: 
 		return ''
 
 
 def tweet():
-	if check_temps() != '':
+	message = check_temps()
+	if message != '':
 
 
 		keys = json.load(open('keys.json'))
@@ -56,10 +61,10 @@ def tweet():
 		api = tweepy.API(auth)
 
 		user = api.me()
-		api.update_status(check_temps()) 
+		api.update_status(message) 
 
 	else: 
-		print('Today not warmer than historic avg')
+		print('Today not different than historic avg')
 
 
 def calculateNormals(month, day, stnID = '1706'):
@@ -81,16 +86,31 @@ def calculateNormals(month, day, stnID = '1706'):
 		
 		# Keep only input day data and add it to the previous years' data
 		df = df[( df.Day == day )]
-		print(strQry)
-		print(str(intYr) + ' ' + str(month) + ' ' + str(day))
-		print(df['Temp (°C)'])
+		#print(strQry)
+		#print(str(intYr) + ' ' + str(month) + ' ' + str(day))
+		#print(df['Temp (°C)'])
 		avg_temps = pandas.concat([avg_temps, df])
 
-	print(avg_temps['Temp (°C)'])
+	#print(avg_temps['Temp (°C)'])
 	avg_temp = avg_temps['Temp (°C)'].mean() 
-	print( month+'-'+day+"'s average temp back in the day was:\n"+str(avg_temp) )
+	#print( month+'-'+day+"'s average temp back in the day was:\n"+str(avg_temp) )
 	return(avg_temp)
 
-#check_temps()
+def do_history(above_or_below):
+	with open('history.json', 'r+') as json_file:
+		history = json.load(json_file)
+
+		history[above_or_below] += 1
+
+		days_above = history['above']
+		days_below = history['below']		
+		
+		json_file.seek(0)
+		json.dump(history, json_file)
+		json_file.truncate()
+
+		return('warmer/colder/total days : '+str(days_above)+'/'+str(days_below)+'/'+str(days_above+days_below))
+
+#print(check_temps())
 tweet()
 #calculateNormals('01', '01')
