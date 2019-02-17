@@ -29,14 +29,14 @@ def check_temps():
 
 	historic_temp = calculateNormals(yest_month, yest_day)
 	
-	print("Is yesterday's temp above the daily historic average?")
-	print(float(yest_temp) > float(historic_temp))
+	print("Yest Temp - Historic Temp:")
+	print(float(yest_temp) - float(historic_temp))
 
 	if float(yest_temp) - float(historic_temp) > 1:
 		history = do_history('above')
 		return "Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" °C warmer than the historic average.\n"+history+"\n\n#ClimateChangeRightNow #ClimateAction"
 
-	if float(yest_temp) - float(historic_temp) < -1:
+	elif float(yest_temp) - float(historic_temp) < -1:
 		history = do_history('below')
 		return "Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" °C colder than the historic average.\n"+history+"\n\n#ClimateChangeRightNow #ClimateAction"
 
@@ -61,7 +61,7 @@ def tweet():
 		api = tweepy.API(auth)
 
 		user = api.me()
-		api.update_status(message) 
+		api.update_status(status=message) 
 
 	else: 
 		print('Today not different than historic avg')
