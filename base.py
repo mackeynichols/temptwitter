@@ -111,6 +111,6 @@ def do_history(above_or_below):
 
 		return('warmer/colder/total days : '+str(days_above)+'/'+str(days_below)+'/'+str((datetime.date.today() - datetime.date(2019, 1, 1)).days + 1) )
 
-print(check_temps())
-#tweet()
+#print(check_temps())
+tweet()
 #calculateNormals('01', '01')
