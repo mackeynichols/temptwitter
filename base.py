@@ -1,116 +1,136 @@
 #! python3
-# base.py - go to envt canada site, compare yest's temp to yest's avg historical temp
+# base.py - Tweets temperature deviation from the average for a list of Canadian weather stations
 
-###
-# https://www.twilio.com/blog/build-deploy-twitter-bots-python-tweepy-pythonanywhere
-###
+
 
 import requests, bs4, os, datetime, tweepy, csv, pandas, json
 
-yest_date = datetime.datetime.now() - datetime.timedelta(1)
+class Twitterbot:
 
-yest_day = yest_date.strftime('%d')
-yest_month = yest_date.strftime('%m')
-yest_year = yest_date.strftime('%Y')
+	def __init__(self, array_of_station_ids, keyfile):
+		# Initialize stations, twitter keys, and dates
 
-def check_temps():
-	# returns true if yest's forecast beats yest's average high, as per weather.gc.ca's website, in Yellowknife
-	
-	yest_url = "http://climate.weather.gc.ca/climate_data/daily_data_e.html?Year="+yest_year+"&Month="+yest_month+"&Day="+yest_day+"&StationID=51058&Prov=NT&urlExtension=_e.html"
-	historic_url = "http://climate.weather.gc.ca/climate_normals/results_1981_2010_e.html?stnID=1706&autofwd=1"
-	#print(yest_url)
+		# WORKING: detect station ID based on input name
+		self.stations = array_of_station_ids
+		self.keys = json.load(open(keyfile))
 
-	yest_date_str = yest_date.strftime('%B %d, %Y')
-	#print(yest_date_str)
-
-	yest_soup = bs4.BeautifulSoup(requests.get(yest_url).text, "html.parser")
-	yest_temp = yest_soup.select('div#dynamicDataTable > table > tbody > tr')[ int(yest_day) ].select('td')[3].text
-	#print("Yesterday's Mean:\n"+yest_temp)
-
-	historic_temp = calculateNormals(yest_month, yest_day)
-	
-	print("Yest Temp - Historic Temp:")
-	print(float(yest_temp) - float(historic_temp))
-
-	if float(yest_temp) - float(historic_temp) > 1:
-		history = do_history('above')
-		return "Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" °C warmer than the historic average.\n"+history+"\n\n#ClimateChangeRightNow #ClimateAction"
-
-	elif float(yest_temp) - float(historic_temp) < -1:
-		history = do_history('below')
-		return "Yesterday in Yellowknife, the temperature was "+str(round(abs(float(yest_temp)-float(historic_temp))))+" °C colder than the historic average.\n"+history+"\n\n#ClimateChangeRightNow #ClimateAction"
+		self.yest_date = datetime.datetime.now() - datetime.timedelta(1)
+		self.yest_day = self.yest_date.strftime('%d')
+		self.yest_month = self.yest_date.strftime('%m')
+		self.yest_year = self.yest_date.strftime('%Y')
 
 
-	else: 
-		return ''
+	def tweet(self):
+		# Sends a tweet with notable temperature deviations from the average from listed station, if any
+
+		message = build_tweet( check_temps( self.stations ))
+		if message != '':
+
+			auth = tweepy.OAuthHandler(self.keys['consumer_key'], self.keys['consumer_secret'])
+			auth.set_access_token(self.keys['access_token'], self.keys['access_token_secret'])
+			api = tweepy.API(auth)
+
+			user = api.me()
+			api.update_status(status=message) 
+
+		else: 
+			print('Today not different than historic avg')
 
 
-def tweet():
-	message = check_temps()
-	if message != '':
+	def build_tweet(self, deviations):
+		pass
 
 
-		keys = json.load(open('keys.json'))
-		consumer_key = keys['consumer_key']
-		consumer_secret = keys['consumer_secret']
-		access_token = keys['access_token']
-		access_token_secret = keys['access_token_secret']
 
-		auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-		auth.set_access_token(access_token, access_token_secret)
-		api = tweepy.API(auth)
+	def check_temps(self):
+		# returns true if yest's forecast beats yest's average high, as per weather.gc.ca's website, in Yellowknife
+		# WORKING: replace "Yellowknife" above with all stations in input
 
-		user = api.me()
-		api.update_status(status=message) 
+		deviations = {}
 
-	else: 
-		print('Today not different than historic avg')
+		for station in self.stations:
+
+			print(station)
+			station_hist = station #WORKING
+
+			# BUILD URLS
+			yest_url = "http://climate.weather.gc.ca/climate_data/daily_data_e.html?Year="+self.yest_year+"&Month="+self.yest_month+"&Day="+self.yest_day+"&StationID="+station+"&Prov=NT&urlExtension=_e.html"
+			historic_url = "http://climate.weather.gc.ca/climate_normals/results_1981_2010_e.html?stnID="+station_hist+"&autofwd=1"
+
+			# GET YESTERDAY'S TEMP
+			yest_soup = bs4.BeautifulSoup(requests.get(yest_url).text, "html.parser")
+			yest_temp = yest_soup.select('div#dynamicDataTable > table > tbody > tr')[ int(self.yest_day) ].select('td')[3].text
+
+			# GET HISTORIC AVG TEMP
+			historic_temp = self.calculateNormals(self.yest_month, self.yest_day, station)
+			
+
+			# IF NO DEVIATION, SKIP TO NEXT INPUT STATION
+			try:
+				if not (float(yest_temp) - float(historic_temp) > 1 or float(yest_temp) - float(historic_temp) < -1):
+					continue
+
+				# IF DEVIATION, LOG ITS DETAILS
+				else:
+
+					deviations[station] = {}
+					deviations[station]['above'] = float(yest_temp) - float(historic_temp) > 1
+					deviations[station]['difference'] = str(round(abs(float(yest_temp)-float(historic_temp))))
+
+			except:
+				pass
+				
+
+		print(deviations)
+		return deviations
 
 
-def calculateNormals(month, day, stnID = '1706'):
-
-	avg_temps = pandas.DataFrame()
-
-	for intYr in range(1971,2000+1):
-	        
-        # Build the query
-		strQry = 'http://climate.weather.gc.ca/climate_data/bulk_data_e.html?format=csv&stationID=' + stnID + "&Year=" + str(intYr) +'&Month=' + str(month) + "&timeframe=1&submit=Download+Data" 
-         
-        # Parse the response       
-		response = requests.get(strQry)
-		month_data = list( csv.reader(response.content.decode('utf-8').splitlines(), delimiter=",") )[15:]
-
-		df = pandas.DataFrame(month_data)
-		df = df.rename(columns=df.iloc[0]).drop(df.index[0])
-		df['Temp (°C)'] = pandas.to_numeric(df['Temp (°C)'])
 		
-		# Keep only input day data and add it to the previous years' data
-		df = df[( df.Day == day )]
-		#print(strQry)
-		#print(str(intYr) + ' ' + str(month) + ' ' + str(day))
-		#print(df['Temp (°C)'])
-		avg_temps = pandas.concat([avg_temps, df])
 
-	#print(avg_temps['Temp (°C)'])
-	avg_temp = avg_temps['Temp (°C)'].mean() 
-	#print( month+'-'+day+"'s average temp back in the day was:\n"+str(avg_temp) )
-	return(avg_temp)
 
-def do_history(above_or_below):
-	with open('history.json', 'r+') as json_file:
-		history = json.load(json_file)
+	def calculateNormals(self, month, day, stnID):
 
-		history[above_or_below] += 1
+		avg_temps = pandas.DataFrame()
 
-		days_above = history['above']
-		days_below = history['below']		
-		
-		json_file.seek(0)
-		json.dump(history, json_file)
-		json_file.truncate()
+		for intYr in range(1971,2000+1):
+		        
+	        # BUILD QUERY
+			strQry = 'http://climate.weather.gc.ca/climate_data/bulk_data_e.html?format=csv&stationID=' + stnID + "&Year=" + str(intYr) +'&Month=' + str(month) + "&timeframe=1&submit=Download+Data" 
+	         
+	        # PARSE RESPONSE      
+			response = requests.get(strQry)
+			month_data = list( csv.reader(response.content.decode('utf-8').splitlines(), delimiter=",") )[15:]
 
-		return('warmer/colder/total days : '+str(days_above)+'/'+str(days_below)+'/'+str((datetime.date.today() - datetime.date(2019, 1, 1)).days + 1) )
+			df = pandas.DataFrame(month_data)
+			df = df.rename(columns=df.iloc[0]).drop(df.index[0])
+			df['Temp (°C)'] = pandas.to_numeric(df['Temp (°C)'])
+			
+			# ADD INPUT DAY'S DATA TO PREVIOUS YEAR'S
+			df = df[( df.Day == day )]
+			avg_temps = pandas.concat([avg_temps, df])
 
-#print(check_temps())
-tweet()
-#calculateNormals('01', '01')
+		#print(avg_temps['Temp (°C)'])
+		avg_temp = avg_temps['Temp (°C)'].mean() 
+		return(avg_temp)
+
+
+
+
+	def do_history(above_or_below):
+		with open('history.json', 'r+') as json_file:
+			history = json.load(json_file)
+
+			history[above_or_below] += 1
+
+			days_above = history['above']
+			days_below = history['below']		
+			
+			json_file.seek(0)
+			json.dump(history, json_file)
+			json_file.truncate()
+
+			return('warmer/colder/total days : '+str(days_above)+'/'+str(days_below)+'/'+str((datetime.date.today() - datetime.date(2019, 1, 1)).days + 1) )
+
+	
+bot1 = Twitterbot(array_of_station_ids=['1706', '10227', '6747', '6629', '160'], keyfile='keys.json')
+bot1.check_temps()
